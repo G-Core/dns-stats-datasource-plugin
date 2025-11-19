@@ -1,0 +1,49 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/master/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "datasource",
+  "name": "G-Core DNS",
+  "id": "gcorelabs-dns-stats-datasource",
+  "metrics": true,
+  "info": {
+    "description": "Datasource for G-Core DNS Zone Statistics",
+    "author": {
+      "name": "G-Core",
+      "url": "https://gcore.com/",
+      "email": "support@gcore.com"
+    },
+    "keywords": ["dns", "statistics"],
+    "logos": {
+      "small": "img/logo-small.svg",
+      "large": "img/logo-large-black.png"
+    },
+    "links": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "dependencies": {
+    "grafanaDependency": ">=12.0.0",
+    "plugins": []
+  },
+  "routes": [
+    {
+      "path": "zones",
+      "url": "https://{{if .JsonData.apiUrl}}{{.JsonData.apiUrl}}{{else}}api.gcore.com{{end}}/dns/v2/zones",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "{{ .SecureJsonData.apiKey }}"
+        }
+      ]
+    },
+    {
+      "path": "zones/all/statistics",
+      "url": "https://{{if .JsonData.apiUrl}}{{.JsonData.apiUrl}}{{else}}api.gcore.com{{end}}/dns/v2/zones/all/statistics",
+      "headers": [
+        {
+          "name": "Authorization",
+          "content": "{{ .SecureJsonData.apiKey }}"
+        }
+      ]
+    }
+  ]
+}
