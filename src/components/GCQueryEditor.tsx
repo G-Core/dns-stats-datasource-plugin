@@ -6,19 +6,67 @@ import { QueryEditorProps, SelectableValue } from "@grafana/data";
 
 import { GCSelectGranularity } from "./GCSelectGranularity";
 import { GCSelectRecordType } from "./GCSelectRecordType";
-import { GCSelectZone } from "./GCSelectZone";
 import { GCInput } from "./GCInput";
 import { defaultQuery } from "../defaults";
-import { createOptionForZone } from "../zonenames";
 
-import { GCDataSourceOptions, GCGranularity, GCQuery, GCDNSRecordType, GCZoneName } from "../types";
+import {
+  GCDataSourceOptions,
+  GCGranularity,
+  GCQuery,
+  GCDNSRecordType,
+  GCVariable,
+} from "../types";
 
-const { FormField } = LegacyForms;
+const { FormField, Select } = LegacyForms;
 
 type Props = QueryEditorProps<DataSource, GCQuery, GCDataSourceOptions>;
 
-export class GCQueryEditor extends PureComponent<Props> {
-  onZoneChange = (value: SelectableValue<GCZoneName>) => {
+type State = {
+  zones: SelectableValue<string>[];
+  loadingZones: boolean;
+};
+
+export class GCQueryEditor extends PureComponent<Props, State> {
+  state: State = { zones: [], loadingZones: true };
+
+  componentDidMount() {
+    this.loadZones();
+  }
+
+  loadZones = async () => {
+    const { datasource } = this.props;
+
+    this.setState({ loadingZones: true });
+
+    try {
+      const result = await datasource.metricFindQuery({
+        selector: { value: GCVariable.Zone },
+      });
+
+      const zones: SelectableValue<string>[] = (result as Array<{ text: string }>).map(
+        (z) => ({
+          value: z.text,
+          label: z.text,
+        })
+      );
+
+
+      const allOption: SelectableValue<string> = {
+        value: "all",
+        label: "All Zones",
+      };
+
+      this.setState({
+        zones: [allOption, ...zones],
+        loadingZones: false,
+      });
+    } catch (e) {
+      console.error("Failed to fetch zones:", e);
+      this.setState({ zones: [], loadingZones: false });
+    }
+  };
+
+  onZoneChange = (value: SelectableValue<string>) => {
     const { onChange, query, onRunQuery } = this.props;
     onChange({ ...query, zone: value?.value });
     onRunQuery();
@@ -44,14 +92,26 @@ export class GCQueryEditor extends PureComponent<Props> {
 
   render() {
     const query = defaults(this.props.query, defaultQuery);
-    const { zone, granularity, record_type, legendFormat } = query;
+    const { granularity, record_type, legendFormat, zone } = query;
+    const { zones, loadingZones } = this.state;
+
+
+    const selectedZone =
+      zone === "all"
+        ? { value: "all", label: "All Zones" }
+        : zones.find((opt) => opt.value === zone) || (zone ? { value: zone, label: zone } : undefined);
+
+
+    const selectedRecordType =
+      record_type === GCDNSRecordType.All
+        ? { value: GCDNSRecordType.All, label: "All" }
+        : { value: record_type, label: record_type };
 
     const selectedGranularity =
-      granularity?.value && Object.values(GCGranularity).includes(granularity.value as GCGranularity)
+      granularity?.value &&
+        Object.values(GCGranularity).includes(granularity.value as GCGranularity)
         ? (granularity as SelectableValue<GCGranularity>)
         : undefined;
-
-    const selectedZone = zone ? createOptionForZone(zone as GCZoneName) : undefined;
 
     return (
       <div
@@ -64,28 +124,22 @@ export class GCQueryEditor extends PureComponent<Props> {
           maxWidth: "500px",
         }}
       >
-        <label
-          className="gf-form-group-label"
-          style={{ marginBottom: "8px", fontWeight: 600, fontSize: "14px" }}
-        >
-          Test Zones
-        </label>
-
         <FormField
           label="Zone"
           labelWidth={10}
+          tooltip="Select a DNS Zone"
           inputEl={
-            <GCSelectZone
+            <Select
               width={25}
+              options={zones}
+              isLoading={loadingZones}
               isSearchable
-              maxVisibleValues={20}
-              minMenuHeight={30}
               menuPlacement="bottom"
               onChange={this.onZoneChange}
               value={selectedZone}
+              placeholder={loadingZones ? "Loading zones..." : "Select zone"}
             />
           }
-          style={{ width: "100%" }}
         />
 
         <FormField
@@ -102,13 +156,12 @@ export class GCQueryEditor extends PureComponent<Props> {
               value={selectedGranularity}
             />
           }
-          style={{ width: "100%" }}
         />
 
         <FormField
           label="Record"
           labelWidth={10}
-          tooltip="Select DNS record"
+          tooltip="DNS Record Type"
           inputEl={
             <GCSelectRecordType
               width={25}
@@ -117,10 +170,9 @@ export class GCQueryEditor extends PureComponent<Props> {
               minMenuHeight={30}
               menuPlacement="bottom"
               onChange={this.onRecordTypeChange}
-              value={record_type ? { value: record_type, label: record_type } : undefined}
+              value={selectedRecordType}
             />
           }
-          style={{ width: "100%" }}
         />
 
         <GCInput
@@ -129,7 +181,7 @@ export class GCQueryEditor extends PureComponent<Props> {
           onChange={this.onLegendFormatChange}
           label="Legend"
           placeholder="legend format"
-          tooltip="Controls the name of the time series. Use placeholders like {{zone}} or {{record_type}}."
+          tooltip="Use placeholders like {{record_type}}."
           type="text"
         />
       </div>

@@ -21,7 +21,7 @@ export enum GCVariable {
 }
 
 export enum GCDNSRecordType {
-  All ="ALL",
+  All = "ALL",
   A = "A",
   AAAA = "AAAA",
   NS = "NS",
@@ -32,16 +32,17 @@ export enum GCDNSRecordType {
   HTTPS = "HTTPS",
 }
 
-export enum GCZoneName {
-  TesttCom = "testt.com",
-  Test2Com = "test2.com",
-  All = "all",
+export type GCZone = string;
+
+export interface ZoneResponse {
+  name: GCZone;
 }
 
-export type GCZone = GCZoneName | string;
-
-export interface GCZoneNameConfig {
-  label: string;
+export interface ZonesApiResponse {
+  zones: ZoneResponse[];
+  total_amount: number;
+  page?: number;
+  per_page?: number;
 }
 
 export interface GCQuery extends DataQuery {
@@ -84,15 +85,7 @@ export interface GCJsonData {
 
 export interface GCVariableQuery {
   selector?: SelectableValue<GCVariable>;
-}
-
-export interface Paginator<T> {
-  count: number;
-  results: T[];
-}
-
-export interface ZoneResponse {
-  name: GCZone;
+  value?: string;
 }
 
 export enum GCUnit {

@@ -86,8 +86,8 @@ export class GCConfigEditor extends PureComponent<Props, State> {
           />
         </div>
 
-        <div className="gf-form-group">
-          <Alert severity="info" title="How to create an API token?">
+       <div className="gf-form-group">
+          <Alert severity={"info"} title="How to create an API token?">
             <a
               href="https://gcore.com/docs/account-settings/create-use-or-delete-a-permanent-api-token"
               target="_blank"

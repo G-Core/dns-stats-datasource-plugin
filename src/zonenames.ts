@@ -1,26 +1,10 @@
 import { SelectableValue } from "@grafana/data";
-import { GCZoneName } from "./types";
 
-// Config object for zones
-interface GCZoneNameConfig {
-  label: string;
-}
+export const createZoneOptions = (): Array<SelectableValue<string>> => [
+  { value: "all", label: "All Zones" },
+];
 
-const config: Record<GCZoneName, GCZoneNameConfig> = {
-  [GCZoneName.TesttCom]: { label: "testt.com" },
-  [GCZoneName.Test2Com]:{label:"test2.com"},
-  [GCZoneName.All]: { label: "All" },
-};
-
-
-export const createZoneOptions = (): Array<SelectableValue<GCZoneName>> =>
-  Object.entries(config).map(([value, { label }]) => ({
-    value: value as GCZoneName,
-    label,
-  }));
-
-
-export const createOptionForZone = (zone: GCZoneName): SelectableValue<GCZoneName> => ({
+export const createOptionForZone = (zone: string): SelectableValue<string> => ({
   value: zone,
-  ...config[zone],
+  label: zone,
 });

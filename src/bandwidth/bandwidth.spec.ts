@@ -1,4 +1,4 @@
-/* eslint-disable no-magic-numbers */
+
 import { preferredBandwidth } from "./bandwidth";
 import { BandwidthEnum } from "./bandwidth-description";
 

@@ -4,25 +4,24 @@ import { Select } from "@grafana/ui";
 import { SelectableValue } from "@grafana/data";
 
 import { defaultVariableQuery } from "../defaults";
-import { GCSelectZone } from "./GCSelectZone";
 import { GCSelectRecordType } from "./GCSelectRecordType";
 import { GCSelectGranularity } from "./GCSelectGranularity";
 
-import { GCVariable, GCVariableQuery,GCZoneName,GCDNSRecordType,GCGranularity, } from "../types";
+import { GCVariable, GCVariableQuery, GCDNSRecordType, GCGranularity } from "../types";
 
 type SelectorState = SelectableValue<GCVariable> & {
-  selected?: GCZoneName | GCDNSRecordType | GCGranularity;
+  selected?: GCDNSRecordType | GCGranularity | string;
 };
 
 export interface GCVariableQueryProps {
   query: GCVariableQuery;
   onChange: (query: GCVariableQuery, definition: string) => void;
+  options: {
+    zones?: SelectableValue<string>[];
+  };
 }
 
-export const GCVariableQueryEditor: React.FC<GCVariableQueryProps> = ({
-  query: rawQuery,
-  onChange,
-}) => {
+export const GCVariableQueryEditor: React.FC<GCVariableQueryProps> = ({ query: rawQuery, onChange, options }) => {
   const query = defaults(rawQuery, defaultVariableQuery);
 
   const [selector, setSelector] = useState<SelectorState>({
@@ -37,9 +36,7 @@ export const GCVariableQueryEditor: React.FC<GCVariableQueryProps> = ({
     onChange({ ...query, selector: newSelector }, sel.label || "");
   };
 
-  const handleValueChange = <T extends GCZoneName | GCDNSRecordType | GCGranularity>(
-    sel: SelectableValue<T>
-  ) => {
+  const handleValueChange = <T extends GCDNSRecordType | GCGranularity | string>(sel: SelectableValue<T>) => {
     const newSelector: SelectorState = { ...selector, selected: sel.value };
     setSelector(newSelector);
     onChange({ ...query, selector: newSelector }, sel.label || "");
@@ -47,25 +44,19 @@ export const GCVariableQueryEditor: React.FC<GCVariableQueryProps> = ({
 
   const renderValueSelector = () => {
     switch (selector.value) {
+      case GCVariable.RecordType:
+        return <GCSelectRecordType value={selector.selected as GCDNSRecordType | undefined} onChange={handleValueChange} />;
+      case GCVariable.Granularity:
+        return <GCSelectGranularity value={selector.selected as GCGranularity | undefined} onChange={handleValueChange} />;
       case GCVariable.Zone:
         return (
-          <GCSelectZone
-            value={selector.selected as GCZoneName | undefined}
+          <Select
+            width={16}
+            value={options.zones?.find((z) => z.value === selector.selected)}
+            options={options.zones}
             onChange={handleValueChange}
-          />
-        );
-      case GCVariable.RecordType:
-        return (
-          <GCSelectRecordType
-            value={selector.selected as GCDNSRecordType | undefined}
-            onChange={handleValueChange}
-          />
-        );
-      case GCVariable.Granularity:
-        return (
-          <GCSelectGranularity
-            value={selector.selected as GCGranularity | undefined}
-            onChange={handleValueChange}
+            menuPlacement="bottom"
+            placeholder="Select zone"
           />
         );
       default:
@@ -74,9 +65,9 @@ export const GCVariableQueryEditor: React.FC<GCVariableQueryProps> = ({
   };
 
   const variableOptions: Array<SelectableValue<GCVariable>> = [
-    { value: GCVariable.Zone, label: "Zone" },
     { value: GCVariable.RecordType, label: "Record" },
     { value: GCVariable.Granularity, label: "Granularity" },
+    { value: GCVariable.Zone, label: "Zone" },
   ];
 
   return (
