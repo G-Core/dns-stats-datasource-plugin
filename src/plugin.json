@@ -1,17 +1,23 @@
 {
   "$schema": "https://raw.githubusercontent.com/grafana/grafana/master/docs/sources/developers/plugins/plugin.schema.json",
   "type": "datasource",
-  "name": "GCore DNS",
+  "name": "Gcore DNS",
   "id": "gcorelabs-dns-stats-datasource",
   "metrics": true,
+  "backend": true,
+  "alerting": true,
+  "executable": "gcore-dns-stats-datasource",
   "info": {
-    "description": "Datasource for GCore DNS Statistics",
+    "description": "Datasource for Gcore DNS Statistics",
     "author": {
-      "name": "GCore",
+      "name": "Gcore",
       "url": "https://gcore.com/",
       "email": "support@gcore.com"
     },
-    "keywords": ["dns", "statistics"],
+    "keywords": [
+      "dns",
+      "statistics"
+    ],
     "logos": {
       "small": "img/logo-small.svg",
       "large": "img/logo-large-black.png"
@@ -24,7 +30,6 @@
     "grafanaDependency": ">=12.0.0",
     "plugins": []
   },
-
   "routes": [
     {
       "path": "zones",
@@ -46,19 +51,24 @@
         }
       ]
     },
-
     {
       "path": "users/me",
       "url": "https://{{if .JsonData.apiUrl}}{{ .JsonData.apiUrl }}{{else}}api.gcore.com{{end}}/users/me",
       "headers": [
-        { "name": "Authorization", "content": "{{ .SecureJsonData.apiKey }}" }
+        {
+          "name": "Authorization",
+          "content": "{{ .SecureJsonData.apiKey }}"
+        }
       ]
     },
     {
       "path": "iam/users/me",
       "url": "https://{{if .JsonData.apiUrl}}{{ .JsonData.apiUrl }}{{else}}api.gcore.com{{end}}/iam/users/me",
       "headers": [
-        { "name": "Authorization", "content": "{{ .SecureJsonData.apiKey }}" }
+        {
+          "name": "Authorization",
+          "content": "{{ .SecureJsonData.apiKey }}"
+        }
       ]
     }
   ]

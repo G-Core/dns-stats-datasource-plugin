@@ -6,7 +6,7 @@ interface GCRecordTypeConfig {
 }
 
 const config: Record<GCDNSRecordType, GCRecordTypeConfig> = {
-  [GCDNSRecordType.All]: { label: "All" }, // add this
+  [GCDNSRecordType.All]: { label: "All" },
   [GCDNSRecordType.A]: { label: "A" },
   [GCDNSRecordType.AAAA]: { label: "AAAA" },
   [GCDNSRecordType.NS]: { label: "NS" },

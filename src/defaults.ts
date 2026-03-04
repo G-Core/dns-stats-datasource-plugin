@@ -1,11 +1,8 @@
-import { GCQuery, GCVariableQuery, GCGranularity, GCVariable, GCDNSRecordType } from "./types";
-import { createOptionForGranularity } from "./granularity";
-import { createOptionForRecordType } from "./recordtype"; 
+import { GCQuery, GCVariable, GCVariableQuery, GCGranularity } from "./types";
 
 export const defaultQuery: Partial<GCQuery> = {
   zone: "all",
-  record_type: createOptionForRecordType(GCDNSRecordType.All).value,
-  granularity: createOptionForGranularity(GCGranularity.OneHour),
+  granularity: { value: GCGranularity.FiveMinutes, label: "5m" },
 };
 
 export const defaultVariableQuery: Partial<GCVariableQuery> = {

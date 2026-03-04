@@ -1,7 +1,7 @@
 import defaults from "lodash/defaults";
 import React, { useState } from "react";
 import { Select } from "@grafana/ui";
-import { SelectableValue, MetricFindValue } from "@grafana/data";
+import { SelectableValue } from "@grafana/data";
 
 import { defaultVariableQuery } from "../defaults";
 import { GCSelectRecordType } from "./GCSelectRecordType";
@@ -17,7 +17,7 @@ export interface GCVariableQueryProps {
   query: GCVariableQuery;
   onChange: (query: GCVariableQuery, definition: string) => void;
   options: {
-    zones?: SelectableValue<string>[]; 
+    zones?: SelectableValue<string>[];
   };
 }
 
@@ -53,7 +53,7 @@ export const GCVariableQueryEditor: React.FC<GCVariableQueryProps> = ({ query: r
           <Select
             width={16}
             value={options.zones?.find((z) => z.value === selector.selected)}
-            options={options.zones} // populated via metricFindQuery
+            options={options.zones}
             onChange={handleValueChange}
             menuPlacement="bottom"
             placeholder="Select zone"

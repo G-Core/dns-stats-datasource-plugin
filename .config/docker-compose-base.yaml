@@ -1,7 +1,7 @@
 services:
   grafana:
     user: root
-    container_name: 'gcorelabs-cdn-stats-datasource'
+    container_name: 'gcorelabs-dns-stats-datasource'
 
     build:
       context: .
@@ -13,12 +13,12 @@ services:
     ports:
       - 3000:3000/tcp
     volumes:
-      - ../dist:/var/lib/grafana/plugins/gcorelabs-cdn-stats-datasource
+      - ./gcorelabs-dns-stats-datasource:/var/lib/grafana/plugins/gcorelabs-dns-stats-datasource
       - ../provisioning:/etc/grafana/provisioning
-      - ..:/root/gcorelabs-cdn-stats-datasource
+      - .:/root/gcorelabs-dns-stats-datasource
     environment:
       NODE_ENV: development
-      GF_LOG_FILTERS: plugin.gcorelabs-cdn-stats-datasource:debug
+      GF_LOG_FILTERS: plugin.gcorelabs-dns-stats-datasource:debug
       GF_LOG_LEVEL: debug
       GF_DATAPROXY_LOGGING: 1
-      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: gcorelabs-cdn-stats-datasource
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: gcorelabs-dns-stats-datasource

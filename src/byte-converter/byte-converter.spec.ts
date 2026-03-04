@@ -1,4 +1,4 @@
-/* eslint-disable no-magic-numbers */
+
 import { byteConverter } from "./byte-converter";
 import { ByteUnitEnum } from "./unit-description";
 

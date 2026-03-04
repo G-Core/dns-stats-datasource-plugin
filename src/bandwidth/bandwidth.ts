@@ -1,4 +1,4 @@
-/* eslint-disable no-magic-numbers */
+
 import { BandwidthEnum } from "./bandwidth-description";
 
 export const preferredBandwidth = (

@@ -8,6 +8,7 @@ export const getSecondsByGranularity = (granularity: GCGranularity): number => {
   switch (granularity) {
     case GCGranularity.FiveMinutes: return 5 * 60;
     case GCGranularity.TenMinutes: return 10 * 60;
+    case GCGranularity.FifteenMinutes: return 15 * 60;
     case GCGranularity.ThirtyMinutes: return 30 * 60;
     case GCGranularity.OneHour: return 60 * 60;
     case GCGranularity.NinetyMinutes: return 1.5 * 60 * 60;

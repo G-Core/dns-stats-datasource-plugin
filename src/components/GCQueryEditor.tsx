@@ -31,7 +31,27 @@ export class GCQueryEditor extends PureComponent<Props, State> {
 
   componentDidMount() {
     this.loadZones();
+    this.persistDefaultGranularityIfMissing();
   }
+
+  componentDidUpdate(prevProps: Props) {
+    // Persist default granularity when query has none (e.g. new alert rule, datasource setup)
+    if (this.props.query !== prevProps.query) {
+      this.persistDefaultGranularityIfMissing();
+    }
+  }
+
+  /**
+   * Ensures query has granularity - persists default when missing.
+   * Fixes BUG-01: granularity not working in datasource setup and alert rules.
+   */
+  persistDefaultGranularityIfMissing = () => {
+    const { query, onChange } = this.props;
+    const normalized = this.normalizeGranularity(query.granularity);
+    if (!normalized) {
+      onChange({ ...query, granularity: defaultQuery.granularity });
+    }
+  };
 
   loadZones = async () => {
     const { datasource } = this.props;
@@ -50,7 +70,7 @@ export class GCQueryEditor extends PureComponent<Props, State> {
         })
       );
 
-    
+
       const allOption: SelectableValue<string> = {
         value: "all",
         label: "All Zones",
@@ -75,7 +95,7 @@ export class GCQueryEditor extends PureComponent<Props, State> {
   onGranularityChange = (value: SelectableValue<GCGranularity>) => {
     const { onChange, query, onRunQuery } = this.props;
     onChange({ ...query, granularity: value });
-    onRunQuery();
+    setTimeout(() => onRunQuery(), 0);
   };
 
   onRecordTypeChange = (value: SelectableValue<GCDNSRecordType>) => {
@@ -90,28 +110,52 @@ export class GCQueryEditor extends PureComponent<Props, State> {
     onRunQuery();
   };
 
+  /**
+   * Normalize granularity for display - handles object, string, or undefined.
+   * Ensures granularity works in dashboard, alert rules, and datasource contexts.
+   */
+  normalizeGranularity = (
+    granularity?: SelectableValue<GCGranularity> | { value?: string; label?: string } | string
+  ): SelectableValue<GCGranularity> | undefined => {
+    const validValues = Object.values(GCGranularity) as string[];
+
+    // Object format: { value: "5m", label: "5m" }
+    if (granularity && typeof granularity === "object" && granularity !== null) {
+      const value = granularity.value ?? (granularity as SelectableValue<GCGranularity>).value;
+      const strValue = typeof value === "string" ? value : "";
+      if (strValue && validValues.includes(strValue)) {
+        return { value: strValue as GCGranularity, label: granularity.label ?? strValue };
+      }
+    }
+
+    // Plain string format (e.g. from alert rule storage)
+    if (typeof granularity === "string" && validValues.includes(granularity)) {
+      return { value: granularity as GCGranularity, label: granularity };
+    }
+
+    return undefined;
+  };
+
   render() {
     const query = defaults(this.props.query, defaultQuery);
     const { granularity, record_type, legendFormat, zone } = query;
     const { zones, loadingZones } = this.state;
 
-   
+
     const selectedZone =
       zone === "all"
         ? { value: "all", label: "All Zones" }
         : zones.find((opt) => opt.value === zone) || (zone ? { value: zone, label: zone } : undefined);
 
-   
+
     const selectedRecordType =
       record_type === GCDNSRecordType.All
         ? { value: GCDNSRecordType.All, label: "All" }
         : { value: record_type, label: record_type };
 
+    // Normalize granularity for display - handle object, string, or undefined (dashboard + alert rules)
     const selectedGranularity =
-      granularity?.value &&
-      Object.values(GCGranularity).includes(granularity.value as GCGranularity)
-        ? (granularity as SelectableValue<GCGranularity>)
-        : undefined;
+      this.normalizeGranularity(granularity) ?? (defaultQuery.granularity as SelectableValue<GCGranularity>);
 
     return (
       <div
@@ -124,7 +168,6 @@ export class GCQueryEditor extends PureComponent<Props, State> {
           maxWidth: "500px",
         }}
       >
-        {/* Zone Selector */}
         <FormField
           label="Zone"
           labelWidth={10}
@@ -143,7 +186,6 @@ export class GCQueryEditor extends PureComponent<Props, State> {
           }
         />
 
-        {/* Granularity */}
         <FormField
           label="Granularity"
           labelWidth={10}
@@ -160,7 +202,6 @@ export class GCQueryEditor extends PureComponent<Props, State> {
           }
         />
 
-        {/* Record Type */}
         <FormField
           label="Record"
           labelWidth={10}
@@ -178,14 +219,13 @@ export class GCQueryEditor extends PureComponent<Props, State> {
           }
         />
 
-        {/* Legend */}
         <GCInput
           inputWidth={30}
           value={legendFormat}
           onChange={this.onLegendFormatChange}
           label="Legend"
-          placeholder="legend format"
-          tooltip="Use placeholders like {{record_type}}."
+          placeholder="e.g. zone, record_type (e.g. test2.com, NS)"
+          tooltip="Leave empty for Zone, record type format (e.g. test2.com, NS)"
           type="text"
         />
       </div>
