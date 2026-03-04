@@ -14,6 +14,7 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
+	"golang.org/x/sync/errgroup"
 )
 
 type GCDataSource struct {
@@ -80,54 +81,54 @@ func (ds *GCDataSource) query(ctx context.Context, query backend.DataQuery) back
 }
 
 func (ds *GCDataSource) fetchStats(ctx context.Context, qm *QueryModel, tr backend.TimeRange) (*StatsResponse, error) {
-	zonesToFetch := []string{}
-
-	if qm.Zone == "" || qm.Zone == "all" {
-
-		allZones, err := ds.getAllZones(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch all zones: %w", err)
-		}
-		for _, z := range allZones {
-			zonesToFetch = append(zonesToFetch, z.Name)
-		}
-	} else if strings.Contains(qm.Zone, ",") {
-
-		parts := strings.Split(qm.Zone, ",")
-		for _, p := range parts {
-			if trimmed := strings.TrimSpace(p); trimmed != "" {
-				zonesToFetch = append(zonesToFetch, trimmed)
-			}
-		}
-	} else {
-
-		zonesToFetch = append(zonesToFetch, qm.Zone)
+	zonesToFetch, err := ds.resolveZones(ctx, qm)
+	if err != nil {
+		return nil, err
 	}
-
 	if len(zonesToFetch) == 0 {
 		log.DefaultLogger.Warn("No zones to fetch")
 		return &StatsResponse{Requests: make(map[string]float64)}, nil
 	}
 
+	// Fetch zones concurrently for better performance (DASH-05, multi-datasource)
+	type zoneResult struct {
+		zone  string
+		stats *StatsResponse
+		err   error
+	}
+	results := make(chan zoneResult, len(zonesToFetch))
+
+	g, gctx := errgroup.WithContext(ctx)
+	for _, zoneName := range zonesToFetch {
+		zoneName := zoneName
+		g.Go(func() error {
+			stats, err := ds.fetchZoneStats(gctx, zoneName, qm, tr)
+			results <- zoneResult{zone: zoneName, stats: stats, err: err}
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		close(results)
+		return nil, err
+	}
+	close(results)
+
 	aggregatedRequests := make(map[string]float64)
 	var aggregatedTotal float64
 	var fetchErrors []string
 
-	for _, zoneName := range zonesToFetch {
-		log.DefaultLogger.Debug("Fetching stats for zone", "zone", zoneName)
-		stats, err := ds.fetchZoneStats(ctx, zoneName, qm, tr)
-		if err != nil {
-			log.DefaultLogger.Warn("Failed to fetch stats for zone", "zone", zoneName, "error", err)
-			fetchErrors = append(fetchErrors, fmt.Sprintf("%s: %v", zoneName, err))
+	for r := range results {
+		if r.err != nil {
+			log.DefaultLogger.Warn("Failed to fetch stats for zone", "zone", r.zone, "error", r.err)
+			fetchErrors = append(fetchErrors, fmt.Sprintf("%s: %v", r.zone, r.err))
 			continue
 		}
-		if stats == nil {
-			log.DefaultLogger.Debug("No stats returned for zone", "zone", zoneName)
+		if r.stats == nil {
 			continue
 		}
-
-		aggregatedTotal += stats.Total
-		for ts, val := range stats.Requests {
+		aggregatedTotal += r.stats.Total
+		for ts, val := range r.stats.Requests {
 			aggregatedRequests[ts] += val
 		}
 	}
@@ -137,11 +138,32 @@ func (ds *GCDataSource) fetchStats(ctx context.Context, qm *QueryModel, tr backe
 	}
 
 	log.DefaultLogger.Debug("Aggregated stats", "points", len(aggregatedRequests), "total", aggregatedTotal)
+	return &StatsResponse{Requests: aggregatedRequests, Total: aggregatedTotal}, nil
+}
 
-	return &StatsResponse{
-		Requests: aggregatedRequests,
-		Total:    aggregatedTotal,
-	}, nil
+func (ds *GCDataSource) resolveZones(ctx context.Context, qm *QueryModel) ([]string, error) {
+	if qm.Zone == "" || qm.Zone == "all" {
+		allZones, err := ds.getAllZones(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch all zones: %w", err)
+		}
+		out := make([]string, 0, len(allZones))
+		for _, z := range allZones {
+			out = append(out, z.Name)
+		}
+		return out, nil
+	}
+	if strings.Contains(qm.Zone, ",") {
+		parts := strings.Split(qm.Zone, ",")
+		out := make([]string, 0, len(parts))
+		for _, p := range parts {
+			if trimmed := strings.TrimSpace(p); trimmed != "" {
+				out = append(out, trimmed)
+			}
+		}
+		return out, nil
+	}
+	return []string{qm.Zone}, nil
 }
 
 func (ds *GCDataSource) fetchZoneStats(ctx context.Context, zoneName string, qm *QueryModel, tr backend.TimeRange) (*StatsResponse, error) {
@@ -166,10 +188,15 @@ func (ds *GCDataSource) fetchZoneStats(ctx context.Context, zoneName string, qm 
 		q.Add("record_type", qm.RecordType)
 	}
 
-	if qm.Granularity.Value != "" {
-		granularitySeconds := granularityToSeconds(qm.Granularity.Value)
-		q.Add("granularity", strconv.Itoa(granularitySeconds))
+	// BUG-01 fix: Gcore DNS API accepts duration strings ("5m", "1h", "2h45m")
+	// per API docs. Send that format for full granularity support.
+	granularityValue := qm.Granularity.Value
+	if granularityValue == "" {
+		granularityValue = "5m"
+		log.DefaultLogger.Debug("Granularity not specified, using default", "granularity", granularityValue)
 	}
+	apiGranularity := granularityToAPIFormat(granularityValue)
+	q.Add("granularity", apiGranularity)
 
 	req.URL.RawQuery = q.Encode()
 	ds.setHeaders(req)

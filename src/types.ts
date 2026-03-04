@@ -5,6 +5,7 @@ export { SelectableValue };
 export enum GCGranularity {
   FiveMinutes = "5m",
   TenMinutes = "10m",
+  FifteenMinutes = "15m",
   ThirtyMinutes = "30m",
   OneHour = "1h",
   NinetyMinutes = "1.5h",

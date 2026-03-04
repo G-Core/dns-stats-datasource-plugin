@@ -1,16 +1,16 @@
 {
   "$schema": "https://raw.githubusercontent.com/grafana/grafana/master/docs/sources/developers/plugins/plugin.schema.json",
   "type": "datasource",
-  "name": "GCore DNS",
+  "name": "Gcore DNS",
   "id": "gcorelabs-dns-stats-datasource",
   "metrics": true,
   "backend": true,
   "alerting": true,
   "executable": "gcore-dns-stats-datasource",
   "info": {
-    "description": "Datasource for GCore DNS Statistics ",
+    "description": "Datasource for Gcore DNS Statistics",
     "author": {
-      "name": "G-Core",
+      "name": "Gcore",
       "url": "https://gcore.com/",
       "email": "support@gcore.com"
     },

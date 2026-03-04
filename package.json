@@ -4,7 +4,9 @@
   "description": "",
   "scripts": {
     "build": "yarn run build:backend && webpack -c ./.config/webpack/webpack.config.ts --env production",
-    "build:backend": "cd pkg && go build -o ../dist/gcore-dns-stats-datasource_windows_amd64.exe .",
+    "build:backend": "node -e \"require('fs').mkdirSync('gcorelabs-dns-stats-datasource',{recursive:true})\" && yarn run build:backend:windows && yarn run build:backend:linux",
+    "build:backend:windows": "cd pkg && go build -o ../gcorelabs-dns-stats-datasource/gcore-dns-stats-datasource_windows_amd64.exe .",
+    "build:backend:linux": "node -e \"require('child_process').spawnSync('go', ['build', '-o', '../gcorelabs-dns-stats-datasource/gcore-dns-stats-datasource_linux_amd64', '.'], {env: {...process.env, GOOS:'linux', GOARCH:'amd64'}, cwd: 'pkg', stdio: 'inherit'})\"",
     "dev": "webpack -w -c ./.config/webpack/webpack.config.ts --env development",
     "lint": "eslint --cache --ignore-path ./.gitignore --ext .js,.jsx,.ts,.tsx .",
     "lint:fix": "yarn run lint --fix && prettier --write --list-different .",
